@@ -1,17 +1,177 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Curriculum Vitae</title>
-    <style>
-      body{
-        background-color: rgb(0, 0, 0);
-        color: rgb(255, 255, 0);
-            }
-    </style>
-  </head>
-  
-  <body>
-    <h1>The resume of Maxim Boegem</h1>
-  </body>
-</html>
+// Get canvas and context
+const canvas = document.getElementById('flappyBirdGame');
+const ctx = canvas.getContext('2d');
+
+// Game variables
+let score;
+let highScore;
+let player;
+let gravity;
+let obstacles;
+let gameSpeed;
+let keys = {};
+
+// Event listeners
+document.addEventListener('keydown', function (evt) {
+    keys[evt.code] = true;
+});
+document.addEventListener('keyup', function (evt) {
+    keys[evt.code] = false;
+});
+
+// Player
+class Player {
+    constructor(x, y, width, height, color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+
+        this.dy = 0;
+        this.jumpForce = 15;
+        this.originalHeight = height;
+        this.grounded = false;
+        this.jumpTimer = 0;
+    }
+
+    Animate() {
+        // Jump
+        if (keys['Space'] || keys['KeyW']) {
+            this.Jump();
+        } else {
+            this.jumpTimer = 0;
+        }
+
+        this.y += this.dy;
+
+        // Gravity
+        if (this.y + this.height < canvas.height) {
+            this.dy += gravity;
+            this.grounded = false;
+        } else {
+            this.dy = 0;
+            this.grounded = true;
+            this.y = canvas.height - this.height;
+        }
+
+        this.Draw();
+    }
+
+    Jump() {
+        if (this.grounded && this.jumpTimer == 0) {
+            this.jumpTimer = 1;
+            this.dy = -this.jumpForce;
+        } else if (this.jumpTimer > 0 && this.jumpTimer < 15) {
+            this.jumpTimer++;
+            this.dy = -this.jumpForce - (this.jumpTimer / 50);
+        }
+    }
+
+    Draw() {
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.closePath();
+    }
+}
+
+// Obstacles
+class Obstacle {
+    constructor(x, width, height, color, type) {
+        this.x = x;
+        this.y = type === 'top' ? 0 : canvas.height - height;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+
+        this.dx = -gameSpeed;
+    }
+
+    Update() {
+        this.x += this.dx;
+        this.Draw();
+        this.dx = -gameSpeed;
+    }
+
+    Draw() {
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.closePath();
+    }
+}
+
+// Start
+function Start() {
+    canvas.width = 800;
+    canvas.height = 500;
+
+    ctx.font = "20px sans-serif";
+
+    gameSpeed = 3;
+    gravity = 1;
+
+    score = 0;
+    highScore = 0;
+
+    player = new Player(25, canvas.height / 2 - 50, 50, 50, '#FF5858');
+
+    obstacles = [];
+
+    requestAnimationFrame(Update);
+}
+
+// Update
+function Update() {
+    requestAnimationFrame(Update);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Spawn Obstacles
+    if (frame % 100 === 0) {
+        let obstacleSize = RandomIntInRange(20, 70);
+        obstacles.push(new Obstacle(canvas.width + obstacleSize, obstacleSize, RandomIntInRange(150, canvas.height / 2), '#2484E4', 'top'));
+        obstacles.push(new Obstacle(canvas.width + obstacleSize, obstacleSize, RandomIntInRange(150, canvas.height / 2), '#2484E4', 'bottom'));
+    }
+
+    // Handle Obstacles
+    for (let i = 0; i < obstacles.length; i++) {
+        let o = obstacles[i];
+
+        if (o.x + o.width < 0) {
+            obstacles.splice(i, 1);
+        }
+
+        o.Update();
+    }
+
+    player.Animate();
+
+    // Score
+    ctx.fillStyle = "#212121";
+    ctx.fillText("Score: " + score, 10, 35);
+    ctx.fillText("High Score: " + highScore, canvas.width - 200, 35);
+
+    // Collision Detection
+    obstacles.forEach(obstacle => {
+        if (player.x < obstacle.x + obstacle.width && player.x + player.width > obstacle.x && player.y < obstacle.y + obstacle.height && player.y + player.height > obstacle.y) {
+            // End Game
+        }
+    });
+
+    // Handle Score
+    if (frame % 5 === 0) {
+        score++;
+    }
+
+    frame++;
+}
+
+// Random Helper Functions
+function RandomIntInRange(min, max) {
+    return Math.round(Math.random() * (max - min) + min);
+}
+
+let frame = 0;
+Start();
+
